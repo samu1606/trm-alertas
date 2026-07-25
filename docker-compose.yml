@@ -1,0 +1,9 @@
+services:
+  trm-alertas:
+    build: .
+    container_name: trm-alertas
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.trm.rule=Host(`trm-alertas.148-230-90-171.nip.io`)"
+      - "traefik.http.services.trm.loadbalancer.server.port=80"
