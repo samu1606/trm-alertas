@@ -28,7 +28,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst cop = response.rates?.COP || 0;\n\n// Umbrales configurables por cliente\nconst UMBRAL_ALTO = 3300;  // Alertar si supera este valor\nconst UMBRAL_BAJO = 3100;  // Alertar si cae por debajo\n\nlet alerta = null;\n\nif (cop >= UMBRAL_ALTO) {\n  alerta = `🚨 *TRM ALTA* 🚨\\n\\n💰 El dólar subió a *$${cop.toFixed(2)} COP*\\n📈 Superó el umbral de $${UMBRAL_ALTO.toLocaleString()}\\n\\n⚡ TRM Alertas`;\n} else if (cop <= UMBRAL_BAJO) {\n  alerta = `🟢 *TRM BAJA* 🟢\\n\\n💰 El dólar bajó a *$${cop.toFixed(2)} COP*\\n📉 Cayó por debajo de $${UMBRAL_BAJO.toLocaleString()}\\n\\nMomento ideal para importar/comprar USD.\\n\\n⚡ TRM Alertas`;\n}\n\nif (alerta) {\n  return { json: { number: '{{PHONE_NUMBER}}', message: alerta } };\n}\n\nreturn [];"
+        "jsCode": "const response = $input.first().json;\nconst cop = response.rates?.COP || 0;\n\n// Umbrales configurables por cliente\nconst UMBRAL_ALTO = 3300;  // Alertar si supera este valor\nconst UMBRAL_BAJO = 3100;  // Alertar si cae por debajo\n\nlet alerta = null;\n\nif (cop >= UMBRAL_ALTO) {\n  alerta = `🚨 *TRM ALTA* 🚨\\n\\n💰 El dólar subió a *$${cop.toFixed(2)} COP*\\n📈 Superó el umbral de $${UMBRAL_ALTO.toLocaleString()}\\n\\n⚡ TRM Alertas`;\n} else if (cop <= UMBRAL_BAJO) {\n  alerta = `🟢 *TRM BAJA* 🟢\\n\\n💰 El dólar bajó a *$${cop.toFixed(2)} COP*\\n📉 Cayó por debajo de $${UMBRAL_BAJO.toLocaleString()}\\n\\nMomento ideal para importar/comprar USD.\\n\\n⚡ TRM Alertas`;\n}\n\nif (alerta) {\n  return { json: { number: '573106055920', message: alerta } };\n}\n\nreturn [];"
       },
       "id": "check-umbral",
       "name": "Verificar Umbral",
@@ -38,7 +38,7 @@
     },
     {
       "parameters": {
-        "url": "http://148.230.90.171:8096/message/sendText/flujodigital",
+        "url": "http://148.230.90.171:8096/message/sendText/wasapea-7c7a2c6c",
         "method": "POST",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",

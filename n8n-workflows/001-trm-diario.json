@@ -28,7 +28,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst cop = response.rates?.COP || 0;\nconst eur = response.rates?.EUR || 0;\nconst fecha = response.time_last_update_utc?.split(' ')?.[0] || new Date().toISOString().split('T')[0];\n\n// Calcular inverso: cuantos COP por 1 USD vs cuantos USD por 1 COP\nconst usdPorCop = (1 / cop).toFixed(6);\n\n// Calcular tendencia (se necesita historial, placeholder)\nconst trmFormatted = new Intl.NumberFormat('es-CO', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cop);\n\nconst message = `💵 *TRM — ${fecha}*\\n\\n💰 *$${trmFormatted} COP* por 1 USD\\n💱 1 COP = ${usdPorCop} USD\\n🇪🇺 1 USD = ${eur} EUR\\n\\n📊 *Tasas LATAM:*\\n🇲🇽 MXN: ${response.rates?.MXN?.toFixed(2)}\\n🇧🇷 BRL: ${response.rates?.BRL?.toFixed(2)}\\n🇵🇪 PEN: ${response.rates?.PEN?.toFixed(2)}\\n🇨🇱 CLP: ${response.rates?.CLP?.toFixed(0)}\\n\\n⚡ *TRM Alertas* — Recibe esto todos los días a las 8am`;\n\nreturn { number: '{{PHONE_NUMBER}}', message: message };\n"
+        "jsCode": "const response = $input.first().json;\nconst cop = response.rates?.COP || 0;\nconst eur = response.rates?.EUR || 0;\nconst fecha = response.time_last_update_utc?.split(' ')?.[0] || new Date().toISOString().split('T')[0];\n\n// Calcular inverso: cuantos COP por 1 USD vs cuantos USD por 1 COP\nconst usdPorCop = (1 / cop).toFixed(6);\n\n// Calcular tendencia (se necesita historial, placeholder)\nconst trmFormatted = new Intl.NumberFormat('es-CO', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cop);\n\nconst message = `💵 *TRM — ${fecha}*\\n\\n💰 *$${trmFormatted} COP* por 1 USD\\n💱 1 COP = ${usdPorCop} USD\\n🇪🇺 1 USD = ${eur} EUR\\n\\n📊 *Tasas LATAM:*\\n🇲🇽 MXN: ${response.rates?.MXN?.toFixed(2)}\\n🇧🇷 BRL: ${response.rates?.BRL?.toFixed(2)}\\n🇵🇪 PEN: ${response.rates?.PEN?.toFixed(2)}\\n🇨🇱 CLP: ${response.rates?.CLP?.toFixed(0)}\\n\\n⚡ *TRM Alertas* — Recibe esto todos los días a las 8am`;\n\nreturn { number: '573106055920', message: message };\n"
       },
       "id": "format-message",
       "name": "Formatear Mensaje",
@@ -38,7 +38,7 @@
     },
     {
       "parameters": {
-        "url": "http://148.230.90.171:8096/message/sendText/flujodigital",
+        "url": "http://148.230.90.171:8096/message/sendText/wasapea-7c7a2c6c",
         "method": "POST",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
