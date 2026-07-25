@@ -1,7 +1,9 @@
 services:
   trm-alertas:
-    build: .
+    image: nginx:alpine
     container_name: trm-alertas
     restart: always
+    volumes:
+      - ./landing/index.html:/usr/share/nginx/html/index.html:ro
     expose:
       - "80"
