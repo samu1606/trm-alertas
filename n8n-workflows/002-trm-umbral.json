@@ -1,13 +1,11 @@
 {
-  "name": "TRM Alertas — Alerta por Umbral (sube/baja)",
+  "name": "TRM Umbral → WhatsApp (v2)",
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [{ "field": "hours", "hoursInterval": 3 }]
-        }
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 3 }] }
       },
-      "id": "schedule-trigger",
+      "id": "schedule",
       "name": "Cada 3 horas",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
@@ -15,64 +13,19 @@
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "https://open.er-api.com/v6/latest/USD",
-        "sendQuery": false,
-        "options": {}
+        "jsCode": "const http = this.helpers.httpRequest;\nconst resp = await http({ method:'GET', url:'https://open.er-api.com/v6/latest/USD' });\nconst cop = resp.rates?.COP;\nif (!cop) return [];\n\nconst UMBRAL_ALTO = 3300;\nconst UMBRAL_BAJO = 3100;\nlet text = null;\n\nif (cop >= UMBRAL_ALTO) {\n  text = `🚨 *TRM ALTA* 🚨\\n\\n💰 El dólar subió a *$${cop.toFixed(2)} COP*\\n📈 Superó el umbral de $${UMBRAL_ALTO.toLocaleString()}\\n\\n⚡ TRM Alertas`;\n} else if (cop <= UMBRAL_BAJO) {\n  text = `🟢 *TRM BAJA* 🟢\\n\\n💰 El dólar bajó a *$${cop.toFixed(2)} COP*\\n📉 Cayó por debajo de $${UMBRAL_BAJO.toLocaleString()}\\n\\nMomento ideal para importar/comprar USD.\\n\\n⚡ TRM Alertas`;\n}\n\nif (text) {\n  await http({\n    method:'POST',\n    url:'http://148.230.90.171:8096/message/sendText/wasapea-7c7a2c6c',\n    headers:{ 'apikey':'wasapea-evo-key-2026', 'Content-Type':'application/json' },\n    body:{ number:'573106055920', text }\n  });\n  return { sent: true, alert: text };\n}\n\nreturn [];\n"
       },
-      "id": "fetch-trm",
-      "name": "Consultar TRM",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [500, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst cop = response.rates?.COP || 0;\n\n// Umbrales configurables por cliente\nconst UMBRAL_ALTO = 3300;  // Alertar si supera este valor\nconst UMBRAL_BAJO = 3100;  // Alertar si cae por debajo\n\nlet alerta = null;\n\nif (cop >= UMBRAL_ALTO) {\n  alerta = `🚨 *TRM ALTA* 🚨\\n\\n💰 El dólar subió a *$${cop.toFixed(2)} COP*\\n📈 Superó el umbral de $${UMBRAL_ALTO.toLocaleString()}\\n\\n⚡ TRM Alertas`;\n} else if (cop <= UMBRAL_BAJO) {\n  alerta = `🟢 *TRM BAJA* 🟢\\n\\n💰 El dólar bajó a *$${cop.toFixed(2)} COP*\\n📉 Cayó por debajo de $${UMBRAL_BAJO.toLocaleString()}\\n\\nMomento ideal para importar/comprar USD.\\n\\n⚡ TRM Alertas`;\n}\n\nif (alerta) {\n  return { json: { number: '573106055920', message: alerta } };\n}\n\nreturn [];"
-      },
-      "id": "check-umbral",
-      "name": "Verificar Umbral",
+      "id": "check-and-send",
+      "name": "Verificar Umbral y Enviar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [750, 300]
-    },
-    {
-      "parameters": {
-        "url": "http://148.230.90.171:8096/message/sendText/wasapea-7c7a2c6c",
-        "method": "POST",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "apikey", "value": "{{EVO_API_KEY}}" },
-            { "name": "Content-Type", "value": "application/json" }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": { "parameters": [] },
-        "options": {}
-      },
-      "id": "send-whatsapp",
-      "name": "Enviar Alerta",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1000, 300]
+      "position": [500, 300]
     }
   ],
   "connections": {
     "Cada 3 horas": {
-      "main": [[ { "node": "Consultar TRM", "type": "main", "index": 0 } ]]
-    },
-    "Consultar TRM": {
-      "main": [[ { "node": "Verificar Umbral", "type": "main", "index": 0 } ]]
-    },
-    "Verificar Umbral": {
-      "main": [[ { "node": "Enviar Alerta", "type": "main", "index": 0 } ]]
+      "main": [[ { "node": "Verificar Umbral y Enviar", "type": "main", "index": 0 } ]]
     }
   },
-  "settings": {
-    "saveExecutionProgress": true,
-    "callerPolicy": "workflowsFromSameOwner"
-  }
+  "settings": { "saveExecutionProgress": true, "callerPolicy": "workflowsFromSameOwner" }
 }
