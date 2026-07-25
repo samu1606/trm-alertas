@@ -1,0 +1,80 @@
+{
+  "name": "TRM Alertas — Tasa de Cambio COP/USD → WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 6 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Cada 6 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://open.er-api.com/v6/latest/USD",
+        "sendQuery": false,
+        "options": {}
+      },
+      "id": "fetch-trm",
+      "name": "Consultar TRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst cop = response.rates?.COP || 0;\nconst eur = response.rates?.EUR || 0;\nconst fecha = response.time_last_update_utc?.split(' ')?.[0] || new Date().toISOString().split('T')[0];\n\n// Calcular inverso: cuantos COP por 1 USD vs cuantos USD por 1 COP\nconst usdPorCop = (1 / cop).toFixed(6);\n\n// Calcular tendencia (se necesita historial, placeholder)\nconst trmFormatted = new Intl.NumberFormat('es-CO', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cop);\n\nconst message = `💵 *TRM — ${fecha}*\\n\\n💰 *$${trmFormatted} COP* por 1 USD\\n💱 1 COP = ${usdPorCop} USD\\n🇪🇺 1 USD = ${eur} EUR\\n\\n📊 *Tasas LATAM:*\\n🇲🇽 MXN: ${response.rates?.MXN?.toFixed(2)}\\n🇧🇷 BRL: ${response.rates?.BRL?.toFixed(2)}\\n🇵🇪 PEN: ${response.rates?.PEN?.toFixed(2)}\\n🇨🇱 CLP: ${response.rates?.CLP?.toFixed(0)}\\n\\n⚡ *TRM Alertas* — Recibe esto todos los días a las 8am`;\n\nreturn { number: '{{PHONE_NUMBER}}', message: message };\n"
+      },
+      "id": "format-message",
+      "name": "Formatear Mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://148.230.90.171:8096/message/sendText/flujodigital",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "{{EVO_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {}
+      },
+      "id": "send-whatsapp",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Cada 6 horas": {
+      "main": [[ { "node": "Consultar TRM", "type": "main", "index": 0 } ]]
+    },
+    "Consultar TRM": {
+      "main": [[ { "node": "Formatear Mensaje", "type": "main", "index": 0 } ]]
+    },
+    "Formatear Mensaje": {
+      "main": [[ { "node": "Enviar WhatsApp", "type": "main", "index": 0 } ]]
+    }
+  },
+  "settings": {
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
