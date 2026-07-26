@@ -1,0 +1,35 @@
+{
+  "name": "TRM Umbral → WhatsApp (v4 Supabase)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "hours", "hoursInterval": 6 }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "Every 6 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const http = this.helpers.httpRequest;\n\nconst SUPABASE_URL = 'https://zavabpchdvssvdnwtuyu.supabase.co';\nconst SUPABASE_KEY = 'eyJhbG…WDm4';\n\nasync function getSubscribers() {\n  const url = SUPABASE_URL + '/rest/v1/alert_subscribers?product=eq.trm&active=eq.true&select=phone,plan,config';\n  try {\n    const data = await http({ method: 'GET', url, headers: { 'apikey': SUPABASE_KEY, 'Authorization': '***' + SUPABASE_KEY } });\n    return Array.isArray(data) ? data : [];\n  } catch (e) { return []; }\n}\n\n// 1. Fetch TRM\nconst resp = await http({ method: 'GET', url: 'https://open.er-api.com/v6/latest/USD' });\nconst cop = resp.rates?.COP || resp.rates?.cop;\nif (!cop) throw new Error('TRM API failed');\n\n// 2. Fetch subscribers with thresholds configured\nconst subscribers = await getSubscribers();\nconst withThreshold = subscribers.filter(s => s.config && (s.config.umbral_alto || s.config.umbral_bajo));\n\nif (withThreshold.length === 0) {\n  return { trm: cop, sent: 0, message: 'No subscribers with thresholds configured' };\n}\n\n// 3. Check each subscriber's threshold and send alerts\nconst results = [];\nfor (const sub of withThreshold) {\n  const alto = sub.config.umbral_alto || 999999;\n  const bajo = sub.config.umbral_bajo || -1;\n\n  let text = null;\n  if (cop >= alto) {\n    text = '🚨 *ALERTA TRM ALTA* 🚨\\n\\n' +\n      '🇺🇸 1 USD = 🇨🇴 $' + cop.toLocaleString('es-CO') + ' COP\\n\\n' +\n      '⚠️ El dólar superó los $' + Number(alto).toLocaleString('es-CO') + '\\n' +\n      '📈 Momento de vender dólares o ajustar precios de importación.\\n\\n' +\n      '⚡ *TRM Alertas*';\n  } else if (cop <= bajo) {\n    text = '🟢 *ALERTA TRM BAJA* 🟢\\n\\n' +\n      '🇺🇸 1 USD = 🇨🇴 $' + cop.toLocaleString('es-CO') + ' COP\\n\\n' +\n      '✅ El dólar bajó de $' + Number(bajo).toLocaleString('es-CO') + '\\n' +\n      '💡 Buen momento para comprar dólares o importar.\\n\\n' +\n      '⚡ *TRM Alertas*';\n  }\n\n  if (!text) continue;\n\n  try {\n    await http({\n      method: 'POST',\n      url: 'http://148.230.90.171:8096/message/sendText/wasapea-7c7a2c6c',\n      headers: { 'apikey': 'wasapea-evo-key-2026', 'Content-Type': 'application/json' },\n      body: { number: sub.phone, text: text }\n    });\n    results.push({ phone: sub.phone, trm: cop, threshold: cop >= alto ? 'ALTO' : 'BAJO', status: 'sent' });\n  } catch (e) {\n    results.push({ phone: sub.phone, status: 'error', error: e.message });\n  }\n}\n\nreturn { trm: cop, triggered: results.length, totalSubs: withThreshold.length, results };\n"
+      },
+      "id": "fetch-send",
+      "name": "Check Thresholds & Send",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Every 6 hours": {
+      "main": [[{"node": "Check Thresholds & Send", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": { "saveExecutionProgress": true, "callerPolicy": "workflowsFromSameOwner" }
+}
