@@ -1,0 +1,55 @@
+{
+  "name": "TRM Diaria → WhatsApp (v4 Supabase)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const http = this.helpers.httpRequest;\n\n// ⚙️ CONFIG\nconst SUPABASE_URL = 'https://zavabpchdvssvdnwtuyu.supabase.co';\nconst SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphdmFicGNoZHZzc3Zkbnd0dXl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzNDA4NDgsImV4cCI6MjA5OTkxNjg0OH0.bGIex-jior3Q48OAwXRmuwJbt6SZ_MQMiyiieY4WDm4';\nconst supabaseHeaders = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };\n\n// 📡 Fetch subscribers from Supabase\nasync function getSubscribers(product) {\n  const url = SUPABASE_URL + '/rest/v1/alert_subscribers?product=eq.' + product + '&active=eq.true&select=phone,plan,config';\n  try {\n    const data = await http({ method: 'GET', url, headers: supabaseHeaders });\n    return Array.isArray(data) ? data : [];\n  } catch (e) {\n    // Fallback: empty list if table doesn't exist yet\n    return [];\n  }\n}\n\n// 📤 Send WhatsApp message\nasync function sendMsg(phone, text) {\n  return http({\n    method: 'POST',\n    url: 'http://148.230.90.171:8096/message/sendText/wasapea-7c7a2c6c',\n    headers: { 'apikey': 'wasapea-evo-key-2026', 'Content-Type': 'application/json' },\n    body: { number: phone, text: text }\n  });\n}\n\n// 1. Fetch TRM (free, no key)\nconst resp = await http({ method: 'GET', url: 'https://open.er-api.com/v6/latest/USD' });\nconst cop = resp.rates?.COP || resp.rates?.cop;\nif (!cop) throw new Error('TRM API failed');\n\nconst date = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Bogota' });\n\nconst text = '💵 *TRM Hoy — ' + date + '*\\n\\n' +\n  '🇺🇸 1 USD = 🇨🇴 $' + cop.toLocaleString('es-CO') + ' COP\\n\\n' +\n  '📊 *Conversiones:*\\n' +\n  '   $10 USD = $' + (10 * cop).toLocaleString('es-CO') + ' COP\\n' +\n  '   $100 USD = $' + (100 * cop).toLocaleString('es-CO') + ' COP\\n' +\n  '   $1,000 USD = $' + (1000 * cop).toLocaleString('es-CO') + ' COP\\n\\n' +\n  '⚡ *TRM Alertas*';\n\n// 2. Send to all subscribers\nconst subscribers = await getSubscribers('trm');\nif (subscribers.length === 0) {\n  return { sent: 0, message: 'No active subscribers' };\n}\n\nconst results = [];\nfor (const sub of subscribers) {\n  try {\n    await sendMsg(sub.phone, text);\n    results.push({ phone: sub.phone, status: 'sent' });\n  } catch (e) {\n    results.push({ phone: sub.phone, status: 'error', error: e.message });\n  }\n}\n\nreturn { sent: results.filter(r => r.status === 'sent').length, total: subscribers.length };"
+      },
+      "id": "fetch-send",
+      "name": "Fetch & Send to Subscribers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Daily": {
+      "main": [
+        [
+          {
+            "node": "Fetch & Send to Subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
