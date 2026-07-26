@@ -1,31 +1,55 @@
 {
-  "name": "TRM Umbral → WhatsApp (v2)",
+  "name": "TRM Umbral Alertas → WhatsApp (v3 multi-user)",
   "nodes": [
     {
       "parameters": {
-        "rule": { "interval": [{ "field": "hours", "hoursInterval": 3 }] }
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
       },
       "id": "schedule",
-      "name": "Cada 3 horas",
+      "name": "Every 6 hours",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const http = this.helpers.httpRequest;\nconst resp = await http({ method:'GET', url:'https://open.er-api.com/v6/latest/USD' });\nconst cop = resp.rates?.COP;\nif (!cop) return [];\n\nconst UMBRAL_ALTO = 3300;\nconst UMBRAL_BAJO = 3100;\nlet text = null;\n\nif (cop >= UMBRAL_ALTO) {\n  text = `🚨 *TRM ALTA* 🚨\\n\\n💰 El dólar subió a *$${cop.toFixed(2)} COP*\\n📈 Superó el umbral de $${UMBRAL_ALTO.toLocaleString()}\\n\\n⚡ TRM Alertas`;\n} else if (cop <= UMBRAL_BAJO) {\n  text = `🟢 *TRM BAJA* 🟢\\n\\n💰 El dólar bajó a *$${cop.toFixed(2)} COP*\\n📉 Cayó por debajo de $${UMBRAL_BAJO.toLocaleString()}\\n\\nMomento ideal para importar/comprar USD.\\n\\n⚡ TRM Alertas`;\n}\n\nif (text) {\n  await http({\n    method:'POST',\n    url:'http://148.230.90.171:8096/message/sendText/wasapea-7c7a2c6c',\n    headers:{ 'apikey':'wasapea-evo-key-2026', 'Content-Type':'application/json' },\n    body:{ number:'573106055920', text }\n  });\n  return { sent: true, alert: text };\n}\n\nreturn [];\n"
+        "jsCode": "const http = this.helpers.httpRequest;\n\n// ⚙️ CONFIG\nasync function sendMsg(phone, text) {\n  return http({\n    method: 'POST',\n    url: 'http://148.230.90.171:8096/message/sendText/wasapea-7c7a2c6c',\n    headers: { 'apikey': 'wasapea-evo-key-2026', 'Content-Type': 'application/json' },\n    body: { number: phone, text: text }\n  });\n}\n\n\n// 📱 SUBSCRIBERS — only 'pro' plan gets threshold alerts\nconst subscribers = [\n  { phone: '573106055920', plan: 'free' },\n  // { phone: '573001234567', plan: 'pro' },\n];\n\n\n// ⚠️ THRESHOLDS — customize here\nconst UMBRAL_ALTO = 3300;\nconst UMBRAL_BAJO = 3100;\n\n// 1. Fetch TRM\nconst resp = await http({ method: 'GET', url: 'https://open.er-api.com/v6/latest/USD' });\nconst cop = resp.rates?.COP || resp.rates?.cop;\nif (!cop) throw new Error('TRM API failed');\n\n// 2. Check thresholds\nlet text = null;\nif (cop >= UMBRAL_ALTO) {\n  text = '🚨 *ALERTA TRM ALTA* 🚨\\n\\n' +\n    '🇺🇸 1 USD = 🇨🇴 $' + cop.toLocaleString('es-CO') + ' COP\\n\\n' +\n    '⚠️ El dólar superó los $' + UMBRAL_ALTO.toLocaleString('es-CO') + '\\n' +\n    '📈 Momento de vender dólares o ajustar precios de importación.\\n\\n' +\n    '⚡ *TRM Alertas*';\n} else if (cop <= UMBRAL_BAJO) {\n  text = '🟢 *ALERTA TRM BAJA* 🟢\\n\\n' +\n    '🇺🇸 1 USD = 🇨🇴 $' + cop.toLocaleString('es-CO') + ' COP\\n\\n' +\n    '✅ El dólar bajó de $' + UMBRAL_BAJO.toLocaleString('es-CO') + '\\n' +\n    '💡 Buen momento para comprar dólares o importar.\\n\\n' +\n    '⚡ *TRM Alertas*';\n}\n\nif (!text) return { sent: 0, trm: cop, message: 'No threshold triggered' };\n\n// 3. Send to pro subscribers only\nconst results = [];\nconst proSubs = subscribers.filter(s => s.plan === 'pro' || s.plan === 'trader');\nfor (const sub of proSubs) {\n  try {\n    await sendMsg(sub.phone, text);\n    results.push({ phone: sub.phone, status: 'sent' });\n  } catch (e) {\n    results.push({ phone: sub.phone, status: 'error', error: e.message });\n  }\n}\n\nreturn { trm: cop, threshold: cop >= UMBRAL_ALTO ? 'ALTO' : 'BAJO', sent: results.length, results };"
       },
-      "id": "check-and-send",
-      "name": "Verificar Umbral y Enviar",
+      "id": "fetch-send",
+      "name": "Check Threshold & Send",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [500, 300]
+      "position": [
+        500,
+        300
+      ]
     }
   ],
   "connections": {
-    "Cada 3 horas": {
-      "main": [[ { "node": "Verificar Umbral y Enviar", "type": "main", "index": 0 } ]]
+    "Every 6 hours": {
+      "main": [
+        [
+          {
+            "node": "Check Threshold & Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": { "saveExecutionProgress": true, "callerPolicy": "workflowsFromSameOwner" }
+  "settings": {
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
 }
